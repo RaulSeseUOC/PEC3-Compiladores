@@ -1,0 +1,167 @@
+import java_cup.runtime.*;
+import java.io.*;
+
+parser code {:
+
+    // --- COMPILERS -- UNIVERSITAT OBERTA DE CATALUNYA
+    // --- Activity 3 - Semantic analysis 
+    //
+    // STUDENT FULL NAME:
+    // UOC USERNAME:
+    // COURSE INSTRUCTOR:
+
+    // Add any attributes to the parser (if you need them) here
+
+
+    // Add any code that you would like to execute before the parser begins
+    // Here you can initialize any variables you require
+    // There is no need to modify this funcion if you don't need it!
+    public static void initParser() {
+
+    }
+
+    // Add any code that you would like to execute after the parser ends
+    // There is no need to modify this function if you don't need it!
+    public static void endParser() {
+
+
+    }
+
+
+:}
+
+terminal BOSS, DATA, STATE, ACTION, GOTO, CHANCE, IF, TRUE, FALSE;
+terminal EQUALS, NOT_EQUALS, LESS_THAN, MORE_THAN, LESS_EQ_THAN, MORE_EQ_THAN;
+terminal SUM, MINUS, TIMES, DIV, AND, OR, NOT;
+terminal OPEN_KEY, CLOSE_KEY, OPEN_PAREN, CLOSE_PAREN, COMMA, SEMICOLON, ARROW;
+
+terminal String  IDENT;
+terminal Integer INT_LITERAL;
+terminal Integer PERCENT_LITERAL;
+terminal Double  FLOAT_LITERAL;
+terminal String  STRING_LITERAL;
+
+non terminal enemy_list, an_enemy, enemy_body;    
+non terminal variables, variable_list, a_variable, ident_list_opt, ident_list;
+non terminal expression, literal_expression;
+non terminal state_decl, state_list, a_state, rule_list, a_rule, condition, a_stmt;
+non terminal action_decl, action_list, stmt_list, an_action;
+
+precedence left AND, OR;
+precedence left LESS_THAN, MORE_THAN, LESS_EQ_THAN, MORE_EQ_THAN;
+precedence left EQUALS, NOT_EQUALS;
+precedence left SUM, MINUS;
+precedence left TIMES, DIV;
+precedence left NOT;
+
+enemy_list ::=
+    an_enemy
+  | an_enemy enemy_list
+  ;
+
+an_enemy ::=
+    BOSS IDENT OPEN_KEY enemy_body CLOSE_KEY 
+  ;
+
+enemy_body ::=
+    variables state_decl action_decl state_list action_list
+  ;
+
+variables ::=
+    DATA OPEN_KEY variable_list CLOSE_KEY
+  ;
+
+variable_list ::=
+    a_variable
+  | a_variable variable_list
+  ;
+
+a_variable ::=
+    IDENT EQUALS expression
+  ;
+
+state_decl ::=
+    STATE OPEN_KEY ident_list_opt CLOSE_KEY
+  ;
+
+action_decl ::=
+    ACTION OPEN_KEY ident_list_opt CLOSE_KEY
+  ;
+
+ident_list_opt ::=
+  | ident_list
+  ;
+
+ident_list ::=
+    IDENT
+  | IDENT COMMA ident_list
+  ;
+
+state_list ::=
+  | a_state state_list
+  ;
+
+action_list ::=
+  | an_action action_list
+  ;
+
+a_state ::=
+    STATE IDENT OPEN_KEY rule_list CLOSE_KEY
+  ;
+
+rule_list ::=
+    a_rule
+  | a_rule rule_list
+  ;
+
+a_rule ::= 
+    condition ARROW stmt_list
+  ;
+
+condition ::=
+    CHANCE OPEN_PAREN PERCENT_LITERAL:percent CLOSE_PAREN 
+  | IF expression
+  ;
+
+stmt_list ::=
+    a_stmt
+  | a_stmt stmt_list
+  ;
+
+a_stmt ::=
+    IDENT EQUALS expression SEMICOLON
+  | IDENT SEMICOLON
+  | GOTO IDENT SEMICOLON
+  ;
+
+an_action ::=
+    ACTION IDENT OPEN_KEY stmt_list CLOSE_KEY
+  ;
+
+expression ::=
+    literal_expression
+  | IDENT
+  | NOT expression                     
+  | expression AND  expression         
+  | expression OR  expression          
+  | expression SUM  expression         
+  | expression MINUS expression        
+  | expression TIMES expression        
+  | expression DIV expression          
+  | expression EQUALS expression       
+  | expression NOT_EQUALS expression   
+  | expression LESS_THAN expression    
+  | expression MORE_THAN expression    
+  | expression LESS_EQ_THAN expression 
+  | expression MORE_EQ_THAN expression 
+  | OPEN_PAREN expression CLOSE_PAREN
+  ;
+
+literal_expression ::=
+    TRUE
+  | FALSE
+  | INT_LITERAL
+  | FLOAT_LITERAL
+  | STRING_LITERAL
+  ;
+
