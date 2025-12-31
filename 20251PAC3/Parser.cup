@@ -6,18 +6,28 @@ parser code {:
     // --- COMPILERS -- UNIVERSITAT OBERTA DE CATALUNYA
     // --- Activity 3 - Semantic analysis 
     //
-    // STUDENT FULL NAME:
-    // UOC USERNAME:
-    // COURSE INSTRUCTOR:
+    // STUDENT FULL NAME: Raúl Sesé Vega
+    // UOC USERNAME: raulsese
+    // COURSE INSTRUCTOR: Francesc Bages Vaque
 
     // Add any attributes to the parser (if you need them) here
+    // Tablas de símbolos
+    public static java.util.Set<String> enemyNames = new java.util.HashSet<>();
+    public static java.util.Map<String, Eval.Type> variables = new java.util.HashMap<>();
+    public static java.util.Set<String> states = new java.util.HashSet<>();
+    public static java.util.Set<String> actions = new java.util.HashSet<>();
 
+    public static String currentEnemy = "";
 
     // Add any code that you would like to execute before the parser begins
     // Here you can initialize any variables you require
     // There is no need to modify this funcion if you don't need it!
     public static void initParser() {
-
+        enemyNames.clear();
+        variables.clear();
+        states.clear();
+        actions.clear();
+        currentEnemy = "";
     }
 
     // Add any code that you would like to execute after the parser ends
@@ -43,7 +53,7 @@ terminal String  STRING_LITERAL;
 
 non terminal enemy_list, an_enemy, enemy_body;    
 non terminal variables, variable_list, a_variable, ident_list_opt, ident_list;
-non terminal expression, literal_expression;
+non terminal Eval.Type expression, literal_expression;
 non terminal state_decl, state_list, a_state, rule_list, a_rule, condition, a_stmt;
 non terminal action_decl, action_list, stmt_list, an_action;
 
@@ -59,9 +69,17 @@ enemy_list ::=
   | an_enemy enemy_list
   ;
 
-an_enemy ::=
-    BOSS IDENT OPEN_KEY enemy_body CLOSE_KEY 
-  ;
+an_enemy ::= BOSS IDENT:id {:
+    // Comprobar si el nombre del enemigo está repetido
+    if (Parser.enemyNames.contains(id)) Eval.emitDuplicateEnemyError(id);
+    Parser.enemyNames.add(id);
+    Parser.currentEnemy = id;
+
+    // Limpiar tablas locales para el nuevo enemigo
+    Parser.variables.clear();
+    Parser.states.clear();
+    Parser.actions.clear();
+:} OPEN_KEY enemy_body CLOSE_KEY;
 
 enemy_body ::=
     variables state_decl action_decl state_list action_list
@@ -76,9 +94,12 @@ variable_list ::=
   | a_variable variable_list
   ;
 
-a_variable ::=
-    IDENT EQUALS expression
-  ;
+a_variable ::= IDENT:id EQUALS expression:e {:
+    // Comprobar si coincide con nombre de enemigo o está duplicado
+    if (id.equals(Parser.currentEnemy)) Eval.emitForbiddenNameError(id);
+    if (Parser.variables.containsKey(id)) Eval.emitDuplicateVarError(id);
+    Parser.variables.put(id, (Eval.Type)e);
+:};
 
 state_decl ::=
     STATE OPEN_KEY ident_list_opt CLOSE_KEY
@@ -93,9 +114,12 @@ ident_list_opt ::=
   ;
 
 ident_list ::=
-    IDENT
-  | IDENT COMMA ident_list
-  ;
+    IDENT:id {:
+        if (id.equals(Parser.currentEnemy)) Eval.emitForbiddenNameError(id);
+        // Aquí la lógica depende de si estamos en STATE o ACTION.
+        // Para simplificar, lo gestionaremos en las declaraciones principales:
+    :}
+  | IDENT:id COMMA ident_list;
 
 state_list ::=
   | a_state state_list
@@ -139,22 +163,24 @@ an_action ::=
   ;
 
 expression ::=
-    literal_expression
-  | IDENT
-  | NOT expression                     
-  | expression AND  expression         
-  | expression OR  expression          
-  | expression SUM  expression         
-  | expression MINUS expression        
-  | expression TIMES expression        
-  | expression DIV expression          
-  | expression EQUALS expression       
-  | expression NOT_EQUALS expression   
-  | expression LESS_THAN expression    
-  | expression MORE_THAN expression    
-  | expression LESS_EQ_THAN expression 
-  | expression MORE_EQ_THAN expression 
-  | OPEN_PAREN expression CLOSE_PAREN
+    literal_expression:l {: RESULT = l; :}
+      | IDENT:id {:
+            // Usamos Parser.variables para que sea accesible desde la clase de acciones
+            if (!Parser.variables.containsKey(id)) {
+                Eval.emitUndeclaredVarError(id);
+                RESULT = Eval.Type.INT; // Tipo por defecto según enunciado
+            } else {
+                RESULT = Parser.variables.get(id);
+            }
+        :}
+  | expression:e1 SUM expression:e2 {: RESULT = Eval.Type.INT; :} // Aritmética siempre devuelve INT
+  | expression:e1 LESS_THAN expression:e2 {:
+        if (e1 != e2) Eval.emitTypeError(e1, e2);
+        RESULT = Eval.Type.BOOLEAN;
+    :}
+  | IF expression:e {:
+        if (e != Eval.Type.BOOLEAN) Eval.emitTypeError(Eval.Type.BOOLEAN, e);
+    :}
   ;
 
 literal_expression ::=
